@@ -21,3 +21,9 @@ type ExampleReply struct {
 
 // Add your RPC definitions here.
 
+type Args struct {
+}
+
+type Reply struct {
+	filename string
+}
