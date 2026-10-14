@@ -32,8 +32,14 @@ func Worker(sockname string, mapf func(string, string) []KeyValue,
 
 	// Your worker implementation here.
 
-	for {
-
+	filename := RPCCall()
+	if filename != "" {
+		content, err := os.ReadFile(filename)
+		if err != nil {
+			log.Fatalf("cannot read %v", filename)
+		}
+		kva := mapf(filename, string(content))
+		fmt.Printf("Filename: %v KVAL: %v\n", filename, len(kva))
 	}
 
 	// uncomment to send the Example RPC to the coordinator.
@@ -41,36 +47,23 @@ func Worker(sockname string, mapf func(string, string) []KeyValue,
 
 }
 
-func RPCCall() {
+func RPCCall() string {
+	args := Args{}
+
+	reply := Reply{}
+
+	ok := call("Coordinator.RequestTask", &args, &reply)
+	if ok {
+		return reply.Filename
+	} else {
+		return ""
+	}
 
 }
 
 // example function to show how to make an RPC call to the coordinator.
 //
 // the RPC argument and reply types are defined in rpc.go.
-func CallExample() {
-
-	// declare an argument structure.
-	args := ExampleArgs{}
-
-	// fill in the argument(s).
-	args.X = 99
-
-	// declare a reply structure.
-	reply := ExampleReply{}
-
-	// send the RPC request, wait for the reply.
-	// the "Coordinator.Example" tells the
-	// receiving server that we'd like to call
-	// the Example() method of struct Coordinator.
-	ok := call("Coordinator.Example", &args, &reply)
-	if ok {
-		// reply.Y should be 100.
-		fmt.Printf("reply.Y %v\n", reply.Y)
-	} else {
-		fmt.Printf("call failed!\n")
-	}
-}
 
 // send an RPC request to the coordinator, wait for the response.
 // usually returns true.
