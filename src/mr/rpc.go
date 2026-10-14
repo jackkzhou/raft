@@ -13,4 +13,6 @@ type Args struct {
 
 type Reply struct {
 	Filename string
+	TaskNum  int
+	NReduce  int
 }

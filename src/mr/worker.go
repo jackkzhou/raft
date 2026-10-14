@@ -1,6 +1,7 @@
 package mr
 
 import (
+	"encoding/json"
 	"fmt"
 	"hash/fnv"
 	"log"
@@ -32,14 +33,38 @@ func Worker(sockname string, mapf func(string, string) []KeyValue,
 
 	// Your worker implementation here.
 
-	filename := RPCCall()
-	if filename != "" {
-		content, err := os.ReadFile(filename)
+	reply := RPCCall()
+	if reply.Filename != "" {
+		content, err := os.ReadFile(reply.Filename)
 		if err != nil {
-			log.Fatalf("cannot read %v", filename)
+			log.Fatalf("cannot read %v", reply.Filename)
 		}
-		kva := mapf(filename, string(content))
-		fmt.Printf("Filename: %v KVAL: %v\n", filename, len(kva))
+		kva := mapf(reply.Filename, string(content))
+		buckets := make([][]KeyValue, reply.NReduce)
+
+		for _, kv := range kva {
+			y := ihash(kv.Key) % reply.NReduce
+			buckets[y] = append(buckets[y], kv)
+		}
+
+		for y, bucket := range buckets {
+			filename := fmt.Sprintf("mr-%d-%d", reply.TaskNum, y)
+			file, err := os.Create(filename)
+			if err != nil {
+				log.Fatalf("cannot create %v", filename)
+			}
+			enc := json.NewEncoder(file)
+			for _, kv := range bucket {
+				err := enc.Encode(&kv)
+				if err != nil {
+					log.Fatalf("cannot encode")
+				}
+			}
+			file.Close()
+
+		}
+
+		fmt.Printf("Filename: %v KVAL: %v\n", reply.Filename, len(kva))
 	}
 
 	// uncomment to send the Example RPC to the coordinator.
@@ -47,16 +72,16 @@ func Worker(sockname string, mapf func(string, string) []KeyValue,
 
 }
 
-func RPCCall() string {
+func RPCCall() Reply {
 	args := Args{}
 
 	reply := Reply{}
 
 	ok := call("Coordinator.RequestTask", &args, &reply)
 	if ok {
-		return reply.Filename
+		return reply
 	} else {
-		return ""
+		return Reply{}
 	}
 
 }

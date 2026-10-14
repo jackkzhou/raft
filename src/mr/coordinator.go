@@ -11,9 +11,10 @@ import (
 
 type Coordinator struct {
 	// Your definitions here.
-	mu    sync.Mutex
-	files []string
-	next  int
+	mu      sync.Mutex
+	files   []string
+	next    int
+	nReduce int
 }
 
 // Your code here -- RPC handlers for the worker to call.
@@ -22,6 +23,8 @@ func (c *Coordinator) RequestTask(args *Args, reply *Reply) error {
 	c.mu.Lock()
 	defer c.mu.Unlock()
 	if c.next < len(c.files) {
+		reply.NReduce = c.nReduce
+		reply.TaskNum = c.next
 		reply.Filename = c.files[c.next]
 		c.next += 1
 	}
@@ -56,6 +59,7 @@ func (c *Coordinator) Done() bool {
 func MakeCoordinator(sockname string, files []string, nReduce int) *Coordinator {
 	c := Coordinator{}
 	c.files = files
+	c.nReduce = nReduce
 
 	// Your code here.
 
